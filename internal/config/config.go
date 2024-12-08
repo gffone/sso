@@ -8,16 +8,19 @@ import (
 )
 
 type Config struct {
-	Env         string        `yaml:"env" env-default:"local"`
-	StoragePath string        `yaml:"storage_path" env-required:"true"`
-	TokenTTL    time.Duration `yaml:"token_ttl" env-required:"true"`
-	GRPC        GRPCConfig    `yaml:"grpc"`
+	Env      string        `yaml:"env" env-default:"local"`
+	TokenTTL time.Duration `yaml:"token_ttl" env-required:"true"`
+	GRPC     GRPCConfig    `yaml:"grpc"`
 }
 
 type GRPCConfig struct {
 	Port    int           `yaml:"port"`
 	Timeout time.Duration `yaml:"timeout"`
 }
+
+const (
+	defaultConfigPath = "config/local.yaml"
+)
 
 func MustLoad() *Config {
 	path := fetchConfigPath()
@@ -42,11 +45,12 @@ func MustLoad() *Config {
 // Path to cfg: flag > env > default
 func fetchConfigPath() string {
 	var res string
+
 	flag.StringVar(&res, "config", "", "config file path")
 	flag.Parse()
 
 	if res == "" {
-		res = os.Getenv("CONFIG_PATH")
+		res = defaultConfigPath
 	}
 
 	return res

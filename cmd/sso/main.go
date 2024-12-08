@@ -3,8 +3,10 @@ package main
 import (
 	"log/slog"
 	"os"
+	"os/signal"
 	"sso/internal/app"
 	"sso/internal/config"
+	"syscall"
 )
 
 const (
@@ -20,9 +22,17 @@ func main() {
 
 	log.Info("start app", cfg)
 
-	application := app.New(log, cfg.GRPC.Port, cfg.StoragePath, cfg.TokenTTL)
+	application := app.New(log, cfg.GRPC.Port, cfg.TokenTTL)
 
-	application.GRPCsrv.MustRun()
+	go application.GRPCsrv.MustRun()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+
+	sig := <-stop
+
+	application.GRPCsrv.Stop()
+	log.Info("stop app: ", sig)
 
 }
 
