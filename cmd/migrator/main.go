@@ -15,7 +15,6 @@ func main() {
 		"postgres://postgres:pwd@localhost:5432/test?sslmode=disable")
 	if err != nil {
 		panic(err)
-
 	}
 
 	if err := m.Up(); err != nil {

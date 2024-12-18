@@ -8,7 +8,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"sso/internal/services/auth"
-	"sso/internal/storage"
 )
 
 const (
@@ -56,7 +55,7 @@ func (s *serverAPI) Register(ctx context.Context, req *ssov1.RegisterRequest) (*
 
 	userID, err := s.auth.RegisterNewUser(ctx, req.GetEmail(), req.GetPassword())
 	if err != nil {
-		if errors.Is(err, storage.ErrUserExists) {
+		if errors.Is(err, auth.ErrUserAlreadyExists) {
 			return nil, status.Error(codes.AlreadyExists, "user already exists")
 		}
 		return nil, status.Error(codes.Internal, "internal server error")
@@ -65,7 +64,6 @@ func (s *serverAPI) Register(ctx context.Context, req *ssov1.RegisterRequest) (*
 	return &ssov1.RegisterResponse{
 		UserId: userID,
 	}, nil
-
 }
 
 func (s *serverAPI) IsAdmin(ctx context.Context, req *ssov1.IsAdminRequest) (*ssov1.IsAdminResponse, error) {
@@ -75,7 +73,7 @@ func (s *serverAPI) IsAdmin(ctx context.Context, req *ssov1.IsAdminRequest) (*ss
 
 	isAdmin, err := s.auth.IsAdmin(ctx, req.GetUserId())
 	if err != nil {
-		if errors.Is(err, storage.ErrUserNotFound) {
+		if errors.Is(err, auth.ErrUserNotFound) {
 			return nil, status.Error(codes.NotFound, "user not found")
 		}
 		return nil, status.Error(codes.Internal, "internal server error")
@@ -98,6 +96,7 @@ func validateLogin(req *ssov1.LoginRequest) error {
 	if req.GetAppId() == emptyValue {
 		return status.Error(codes.InvalidArgument, "app required")
 	}
+
 	return nil
 }
 
@@ -114,9 +113,9 @@ func validateRegister(req *ssov1.RegisterRequest) error {
 }
 
 func validateIsAdmin(req *ssov1.IsAdminRequest) error {
-
 	if req.GetUserId() == emptyValue {
 		return status.Error(codes.InvalidArgument, "user_id required")
 	}
+
 	return nil
 }

@@ -42,7 +42,7 @@ func MustLoad() *Config {
 	return &config
 }
 
-// Path to cfg: flag > env > default
+// Path to cfg: flag >  default
 func fetchConfigPath() string {
 	var res string
 

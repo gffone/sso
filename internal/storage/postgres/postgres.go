@@ -42,47 +42,38 @@ func New() (*Storage, error) {
 func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (int64, error) {
 	const op = "storage.postgres.SaveUser"
 
-	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
-
+	tx, err := s.db.Begin()
 	if err != nil {
 		return 0, fmt.Errorf("%s: %w", op, err)
 	}
 
-	stmt, err := s.db.PrepareContext(ctx, "INSERT INTO users (email, pass_hash) VALUES ($1, $2);")
-	txStmt := tx.Stmt(stmt)
-
+	stmt, err := tx.Prepare("INSERT INTO users (email, pass_hash) VALUES ($1, $2);")
 	if err != nil {
-		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			return 0, fmt.Errorf("%s: %w", op, fmt.Errorf(fmt.Sprintf("unable to rollback %v", rollbackErr)))
-		}
-		return 0, fmt.Errorf("%s: %w , tx rollback", op, err)
+		return 0, fmt.Errorf("%s: %w", op, err)
 	}
 
-	_, err = txStmt.ExecContext(ctx, email, passHash)
+	_, err = stmt.ExecContext(ctx, email, passHash)
 	if err != nil {
-		var pqErr *pq.Error
-
-		if errors.As(err, &pqErr) && pqErr.Code == "23505" {
-			return 0, fmt.Errorf("%s: %w", op, storage.ErrUserExists)
-		}
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			return 0, fmt.Errorf("%s: %w", op, fmt.Errorf(fmt.Sprintf("unable to rollback %v", rollbackErr)))
+			return 0, fmt.Errorf("%s: %w", op, rollbackErr)
+		} else {
+			var pqErr *pq.Error
+			if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+				return 0, fmt.Errorf("%s: %w", op, storage.ErrUserExists)
+			}
+			return 0, fmt.Errorf("%s: %w", op, err)
 		}
-
-		return 0, fmt.Errorf("%s: %w , tx rollback", op, err)
 	}
 
-	row := tx.QueryRowContext(ctx, "SELECT currval(pg_get_serial_sequence('users', 'id'));")
+	if commitErr := tx.Commit(); commitErr != nil {
+		return 0, fmt.Errorf("%s: %w", op, commitErr)
+	}
 
 	var uid int64
-
-	err = row.Scan(&uid)
+	stmt, err = s.db.PrepareContext(ctx, "SELECT id FROM users WHERE email = $1;")
+	err = stmt.QueryRowContext(ctx, email).Scan(&uid)
 	if err != nil {
 		return 0, fmt.Errorf("%s: %w", op, err)
-	}
-
-	if comErr := tx.Commit(); comErr != nil {
-		return 0, fmt.Errorf("%s: %w", op, fmt.Sprintf("unable to commit %v", comErr))
 	}
 
 	return uid, nil
@@ -145,9 +136,7 @@ func (s *Storage) App(ctx context.Context, appID int64) (models.App, error) {
 	row := stmt.QueryRowContext(ctx, appID)
 
 	var app models.App
-
 	err = row.Scan(&app.ID, &app.Name, &app.Secret)
-
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return models.App{}, fmt.Errorf("%s: %w", op, storage.ErrAppNotFound)
