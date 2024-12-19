@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/lib/pq"
 	"sso/internal/domain/models"
 	"sso/internal/storage"
 
@@ -42,31 +41,18 @@ func New() (*Storage, error) {
 func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (int64, error) {
 	const op = "storage.postgres.SaveUser"
 
-	tx, err := s.db.Begin()
-	if err != nil {
-		return 0, fmt.Errorf("%s: %w", op, err)
+	if ok, err := s.userNotExists(ctx, email); !ok {
+		return 0, err
 	}
 
-	stmt, err := tx.Prepare("INSERT INTO users (email, pass_hash) VALUES ($1, $2);")
+	stmt, err := s.db.Prepare("INSERT INTO users (email, pass_hash) VALUES ($1, $2);")
 	if err != nil {
 		return 0, fmt.Errorf("%s: %w", op, err)
 	}
 
 	_, err = stmt.ExecContext(ctx, email, passHash)
 	if err != nil {
-		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			return 0, fmt.Errorf("%s: %w", op, rollbackErr)
-		} else {
-			var pqErr *pq.Error
-			if errors.As(err, &pqErr) && pqErr.Code == "23505" {
-				return 0, fmt.Errorf("%s: %w", op, storage.ErrUserExists)
-			}
-			return 0, fmt.Errorf("%s: %w", op, err)
-		}
-	}
-
-	if commitErr := tx.Commit(); commitErr != nil {
-		return 0, fmt.Errorf("%s: %w", op, commitErr)
+		return 0, fmt.Errorf("%s: %w", op, err)
 	}
 
 	var uid int64
@@ -77,6 +63,26 @@ func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (
 	}
 
 	return uid, nil
+}
+
+func (s *Storage) userNotExists(ctx context.Context, email string) (bool, error) {
+	const op = "storage.postgres.userExists"
+
+	stmt, err := s.db.Prepare("SELECT id FROM users WHERE email = $1")
+	if err != nil {
+		return false, fmt.Errorf("%s: %w", op, err)
+	}
+
+	var uid int64
+	err = stmt.QueryRowContext(ctx, email).Scan(&uid)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return true, nil
+		} else {
+			return false, fmt.Errorf("%s: %w", op, err)
+		}
+	}
+	return false, storage.ErrUserExists
 }
 
 func (s *Storage) User(ctx context.Context, email string) (models.User, error) {
