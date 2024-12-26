@@ -62,8 +62,8 @@ func (auth *Auth) RegisterNewUser(ctx context.Context, email, password string) (
 		log.Error("failed to save user", err.Error())
 		return 0, fmt.Errorf("%s: %w", op, err)
 	}
-
 	log.Info("user created", slog.String("email", email))
+
 	return id, nil
 }
 
@@ -117,7 +117,6 @@ func (auth *Auth) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 		}
 		return false, fmt.Errorf("%s: %w", op, err)
 	}
-
 	log.Info("user is admin: ", slog.Bool("isAdmin", isAdmin))
 
 	return isAdmin, nil

@@ -9,7 +9,6 @@ import (
 )
 
 func main() {
-
 	m, err := migrate.New(
 		"file://test_migrations",
 		"postgres://postgres:pwd@localhost:5432/test?sslmode=disable")

@@ -30,7 +30,6 @@ func Register(gRPC *grpc.Server, auth Auth) {
 }
 
 func (s *serverAPI) Login(ctx context.Context, req *ssov1.LoginRequest) (*ssov1.LoginResponse, error) {
-
 	if err := validateLogin(req); err != nil {
 		return nil, err
 	}

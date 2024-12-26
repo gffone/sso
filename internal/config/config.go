@@ -7,6 +7,10 @@ import (
 	"time"
 )
 
+const (
+	defaultConfigPath = "config/local.yaml"
+)
+
 type Config struct {
 	Env      string        `yaml:"env" env-default:"local"`
 	TokenTTL time.Duration `yaml:"token_ttl" env-required:"true"`
@@ -17,10 +21,6 @@ type GRPCConfig struct {
 	Port    int           `yaml:"port"`
 	Timeout time.Duration `yaml:"timeout"`
 }
-
-const (
-	defaultConfigPath = "config/local.yaml"
-)
 
 func MustLoad() *Config {
 	path := fetchConfigPath()

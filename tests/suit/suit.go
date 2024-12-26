@@ -35,7 +35,6 @@ func NewSuit(t *testing.T) (context.Context, *Suit) {
 	})
 
 	cc, err := grpc.NewClient(grpcAddr(cfg), grpc.WithTransportCredentials(insecure.NewCredentials()))
-
 	if err != nil {
 		t.Fatal(err)
 	}
