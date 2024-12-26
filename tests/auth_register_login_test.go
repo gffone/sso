@@ -38,11 +38,12 @@ func TestRegisterLogin_Login_HappyPath(t *testing.T) {
 		Password: password,
 		AppId:    appID,
 	})
+
 	require.NoError(t, err)
 
 	loginTime := time.Now()
-
 	token := resLogin.GetToken()
+
 	require.NotEmpty(t, token)
 
 	tokenParsed, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
@@ -54,7 +55,6 @@ func TestRegisterLogin_Login_HappyPath(t *testing.T) {
 	claims, ok := tokenParsed.Claims.(jwt.MapClaims)
 
 	assert.True(t, ok)
-
 	assert.Equal(t, resReg.GetUserId(), int64(claims["uid"].(float64)))
 	assert.Equal(t, email, claims["email"].(string))
 	assert.Equal(t, appID, int(claims["app_id"].(float64)))
@@ -132,7 +132,6 @@ func TestRegisterLogin_LoginAfterRepeatedRegistration(t *testing.T) {
 	claims, ok := tokenParsed.Claims.(jwt.MapClaims)
 
 	assert.True(t, ok)
-
 	assert.Equal(t, resReg1.GetUserId(), int64(claims["uid"].(float64)))
 	assert.Equal(t, email, claims["email"].(string))
 	assert.Equal(t, appID, int(claims["app_id"].(float64)))
@@ -178,9 +177,9 @@ func TestRegister_FailCases(t *testing.T) {
 				Email:    tt.email,
 				Password: tt.password,
 			})
+
 			require.Error(t, err)
 			require.Contains(t, err.Error(), tt.expectedErr)
-
 		})
 	}
 }
@@ -238,6 +237,7 @@ func TestLogin_FailCases(t *testing.T) {
 				Email:    gofakeit.Email(),
 				Password: gofakeit.Password(true, true, true, true, true, passDefaultLen),
 			})
+
 			require.NoError(t, err)
 
 			_, err = st.AuthClient.Login(ctx, &ssov1.LoginRequest{
@@ -245,6 +245,7 @@ func TestLogin_FailCases(t *testing.T) {
 				Password: tt.password,
 				AppId:    tt.appID,
 			})
+
 			require.Error(t, err)
 			require.Contains(t, err.Error(), tt.expectedErr)
 		})
